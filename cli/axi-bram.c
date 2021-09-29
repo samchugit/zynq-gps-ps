@@ -17,7 +17,7 @@ typedef unsigned long u32;
 
 #define DEFAULT_BRAM_BASE_ADDR 0x40000000
 #define DEFAULT_BRAM_DEPTH 0x2000
-#define DEFAULT_BRAM_OFFSET 0x0
+#define DEFAULT_DATA_OFFSET 0x0
 #define DEFAULT_DATA_LEN 0x1
 
 /**
@@ -116,15 +116,15 @@ int UnmapBram(void *bram32_vptr, u32 bram_depth)
  * @brief write a word(u32) to BRAM at offset
  * @param bram32_vptr BRAM mapped address
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @param word the data to be write
  * @return 0 if success, -1 if failed
  */
-int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset, u32 word)
+int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset, u32 word)
 {
-    if (bram_offset < bram_depth)
+    if (data_offset < bram_depth)
     {
-        bram32_vptr[bram_offset] = word;
+        bram32_vptr[data_offset] = word;
 #ifdef DEBUG_INFO
         printf("word write to BRAM\n");
 #endif
@@ -140,17 +140,17 @@ int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset, u32 word)
  * @brief read a word(u32) from BRAM at offset
  * @param bram32_vptr BRAM mapped address
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @return data if success, -1 if failed
  */
-u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset)
+u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset)
 {
-    if (bram_offset < bram_depth)
+    if (data_offset < bram_depth)
     {
 #ifdef DEBUG_INFO
         printf("word read from BRAM\n");
 #endif
-        return bram32_vptr[bram_offset];
+        return bram32_vptr[data_offset];
     }
 #ifdef DEBUG_INFO
     printf("failed to read word from BRAM\n");
@@ -162,23 +162,23 @@ u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset)
  * @brief write data to BRAM at offset
  * @param bram_base_addr base address of BRAM
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @param data data to write
  * @param data_len length of data
  * @return 0 if success, -1 if overflow
  */
-int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 bram_offset, u32 *data, u32 data_len)
+int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data, u32 data_len)
 {
     int fd = OpenPhysicalMem();
     u32 *bram32_vptr = MapBram(fd, bram_base_addr, bram_depth);
     u32 i;
     int ret = 0;
 
-    if (bram_offset + data_len < bram_depth)
+    if (data_offset + data_len < bram_depth)
     {
         for (i = 0; i < data_len; i++)
         {
-            BramWriteWord(bram32_vptr, bram_depth, bram_offset + i, data[i]);
+            BramWriteWord(bram32_vptr, bram_depth, data_offset + i, data[i]);
         }
 #ifdef DEBUG_INFO
         printf("words write to BRAM\n");
@@ -202,23 +202,23 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 bram_offset, u32 *dat
  * @brief read data from BRAM at offset
  * @param bram_base_addr base address of BRAM
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @param data data to write
  * @param data_len length of data
  * @return 0 if success, -1 if overflow
  */
-int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 bram_offset, u32 *data, u32 data_len)
+int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data, u32 data_len)
 {
     int fd = OpenPhysicalMem();
     u32 *bram32_vptr = MapBram(fd, bram_base_addr, bram_depth);
     u32 i;
     int ret = 0;
 
-    if (bram_offset + data_len < bram_depth)
+    if (data_offset + data_len < bram_depth)
     {
         for (i = 0; i < data_len; i++)
         {
-            data[i] = BramReadWord(bram32_vptr, bram_depth, bram_offset + i);
+            data[i] = BramReadWord(bram32_vptr, bram_depth, data_offset + i);
         }
 #ifdef DEBUG_INFO
         printf("words read from BRAM\n");
@@ -246,9 +246,9 @@ void usage(void)
                     "Options:\n"
                     "  -b <bram_base_addr>  BRAM base address in hex, default is 0x%X\n"
                     "  -d <bram_depth>      BRAM depth in hex, default is 0x%X\n"
-                    "  -o <data_offset>     Data offset of BRAM in hex, default is 0x%X\n"
+                    "  -o <data_offset>     Data offset in hex, default is 0x%X\n"
                     "  -l <data_length>     Data length in hex\n",
-            DEFAULT_BRAM_BASE_ADDR, DEFAULT_BRAM_DEPTH, DEFAULT_BRAM_OFFSET);
+            DEFAULT_BRAM_BASE_ADDR, DEFAULT_BRAM_DEPTH, DEFAULT_DATA_OFFSET);
     return;
 }
 
@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
     int opt;
     u32 bram_base_addr = DEFAULT_BRAM_BASE_ADDR;
     u32 bram_depth = DEFAULT_BRAM_DEPTH;
-    u32 bram_offset = DEFAULT_BRAM_OFFSET;
+    u32 data_offset = DEFAULT_DATA_OFFSET;
     u32 data_len = DEFAULT_DATA_LEN;
 
     if (argc < 4)
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
             sscanf(optarg, "%lx", &bram_depth);
             break;
         case 'o':
-            sscanf(optarg, "%lx", &bram_offset);
+            sscanf(optarg, "%lx", &data_offset);
             break;
         case 'l':
             sscanf(optarg, "%lx", &data_len);
@@ -306,10 +306,10 @@ int main(int argc, char *argv[])
     if (flag == READ)
     {
         printf("Reading 0x%lx words from BRAM:\n", data_len);
-        BramReadWords(bram_base_addr, bram_depth, bram_offset, data, data_len);
+        BramReadWords(bram_base_addr, bram_depth, data_offset, data, data_len);
         for (i = 0; i < data_len; i++)
         {
-            addr = bram_base_addr + bram_offset + 4 * i;
+            addr = bram_base_addr + 4 * (data_offset + i);
             printf("  0x%08lX: 0x%08lX\n", addr, data[i]);
         }
     }
@@ -318,11 +318,11 @@ int main(int argc, char *argv[])
         printf("Writing 0x%lx words to BRAM:\n", data_len);
         for (i = 0; i < data_len; i++)
         {
-            addr = bram_base_addr + bram_offset + 4 * i;
+            addr = bram_base_addr + 4 * (data_offset + i);
             data[i] = strtoul(argv[argc - data_len + i], NULL, 16);
             printf("  0x%08lX: 0x%08lX\n", addr, data[i]);
         }
-        BramWriteWords(bram_base_addr, bram_depth, bram_offset, data, data_len);
+        BramWriteWords(bram_base_addr, bram_depth, data_offset, data, data_len);
     }
     else
     {

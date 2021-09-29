@@ -101,15 +101,15 @@ int UnmapBram(void *bram32_vptr, u32 bram_depth)
  * @brief write a word(u32) to BRAM at offset
  * @param bram32_vptr BRAM mapped address
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @param word the data to be write
  * @return 0 if success, -1 if failed
  */
-int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset, u32 word)
+int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset, u32 word)
 {
-    if (bram_offset < bram_depth)
+    if (data_offset < bram_depth)
     {
-        bram32_vptr[bram_offset] = word;
+        bram32_vptr[data_offset] = word;
 #ifdef DEBUG_INFO
         printf("word write to BRAM\n");
 #endif
@@ -125,17 +125,17 @@ int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset, u32 word)
  * @brief read a word(u32) from BRAM at offset
  * @param bram32_vptr BRAM mapped address
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @return data if success, -1 if failed
  */
-u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset)
+u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset)
 {
-    if (bram_offset < bram_depth)
+    if (data_offset < bram_depth)
     {
 #ifdef DEBUG_INFO
         printf("word read from BRAM\n");
 #endif
-        return bram32_vptr[bram_offset];
+        return bram32_vptr[data_offset];
     }
 #ifdef DEBUG_INFO
     printf("failed to read word from BRAM\n");
@@ -147,23 +147,23 @@ u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 bram_offset)
  * @brief write data to BRAM at offset
  * @param bram_base_addr base address of BRAM
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @param data data to write
  * @param data_len length of data
  * @return 0 if success, -1 if overflow
  */
-int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 bram_offset, u32 *data, u32 data_len)
+int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data, u32 data_len)
 {
     int fd = OpenPhysicalMem();
     u32 *bram32_vptr = MapBram(fd, bram_base_addr, bram_depth);
     u32 i;
     int ret = 0;
 
-    if (bram_offset + data_len < bram_depth)
+    if (data_offset + data_len < bram_depth)
     {
         for (i = 0; i < data_len; i++)
         {
-            BramWriteWord(bram32_vptr, bram_depth, bram_offset + i, data[i]);
+            BramWriteWord(bram32_vptr, bram_depth, data_offset + i, data[i]);
         }
 #ifdef DEBUG_INFO
         printf("words write to BRAM\n");
@@ -187,23 +187,23 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 bram_offset, u32 *dat
  * @brief read data from BRAM at offset
  * @param bram_base_addr base address of BRAM
  * @param bram_depth depth of BRAM
- * @param bram_offset offset of BRAM base address
+ * @param data_offset offset of data
  * @param data data to write
  * @param data_len length of data
  * @return 0 if success, -1 if overflow
  */
-int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 bram_offset, u32 *data, u32 data_len)
+int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data, u32 data_len)
 {
     int fd = OpenPhysicalMem();
     u32 *bram32_vptr = MapBram(fd, bram_base_addr, bram_depth);
     u32 i;
     int ret = 0;
 
-    if (bram_offset + data_len < bram_depth)
+    if (data_offset + data_len < bram_depth)
     {
         for (i = 0; i < data_len; i++)
         {
-            data[i] = BramReadWord(bram32_vptr, bram_depth, bram_offset + i);
+            data[i] = BramReadWord(bram32_vptr, bram_depth, data_offset + i);
         }
 #ifdef DEBUG_INFO
         printf("words read from BRAM\n");

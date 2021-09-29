@@ -33,8 +33,7 @@ C_INCLUDES =  \
 
 # cli sources
 CLI_SOURCES = \
-cli/axi-bram.c \
-cli/test.c
+cli/axi-bram.c
 
 #######################################
 # binaries
