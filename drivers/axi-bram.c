@@ -9,7 +9,7 @@
  * @brief open physical memory /dev/mem
  * @return file descriptor if success, -1 if failed
  */
-int OpenPhysicalMem()
+int __OpenPhysicalMem()
 {
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0)
@@ -30,7 +30,7 @@ int OpenPhysicalMem()
  * @param fd file descriptor of opened /dev/mem file
  * @return 0 if success, -1 if failed
  */
-int ClosePhysicalMem(int fd)
+int __ClosePhysicalMem(int fd)
 {
     int ret = close(fd);
     if (ret < 0)
@@ -53,7 +53,7 @@ int ClosePhysicalMem(int fd)
  * @param bram_depth depth of BRAM
  * @return map address if success, MAP_FAILED if failed
  */
-u32 *MapBram(int fd, u32 bram_base_addr, u32 bram_depth)
+u32 *__MapBram(int fd, u32 bram_base_addr, u32 bram_depth)
 {
     u32 *bram32_vptr;
     bram32_vptr = (u32 *)mmap(NULL,
@@ -81,7 +81,7 @@ u32 *MapBram(int fd, u32 bram_base_addr, u32 bram_depth)
  * @param bram_depth depth of BRAM
  * @return 0 if success, -1 if failed
  */
-int UnmapBram(void *bram32_vptr, u32 bram_depth)
+int __UnmapBram(void *bram32_vptr, u32 bram_depth)
 {
     int ret = munmap(bram32_vptr, bram_depth);
     if (ret < 0)
@@ -105,7 +105,7 @@ int UnmapBram(void *bram32_vptr, u32 bram_depth)
  * @param word the data to be write
  * @return 0 if success, -1 if failed
  */
-int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset, u32 word)
+int __BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset, u32 word)
 {
     if (data_offset < bram_depth)
     {
@@ -128,7 +128,7 @@ int BramWriteWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset, u32 word)
  * @param data_offset offset of data
  * @return data if success, -1 if failed
  */
-u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset)
+u32 __BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset)
 {
     if (data_offset < bram_depth)
     {
@@ -154,8 +154,8 @@ u32 BramReadWord(u32 *bram32_vptr, u32 bram_depth, u32 data_offset)
  */
 int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data, u32 data_len)
 {
-    int fd = OpenPhysicalMem();
-    u32 *bram32_vptr = MapBram(fd, bram_base_addr, bram_depth);
+    int fd = __OpenPhysicalMem();
+    u32 *bram32_vptr = __MapBram(fd, bram_base_addr, bram_depth);
     u32 i;
     int ret = 0;
 
@@ -163,7 +163,7 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *dat
     {
         for (i = 0; i < data_len; i++)
         {
-            BramWriteWord(bram32_vptr, bram_depth, data_offset + i, data[i]);
+            __BramWriteWord(bram32_vptr, bram_depth, data_offset + i, data[i]);
         }
 #ifdef DEBUG_INFO
         printf("words write to BRAM\n");
@@ -178,8 +178,8 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *dat
         ret = -1;
     }
 
-    UnmapBram(bram32_vptr, bram_depth);
-    ClosePhysicalMem(fd);
+    __UnmapBram(bram32_vptr, bram_depth);
+    __ClosePhysicalMem(fd);
     return ret;
 }
 
@@ -194,8 +194,8 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *dat
  */
 int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data, u32 data_len)
 {
-    int fd = OpenPhysicalMem();
-    u32 *bram32_vptr = MapBram(fd, bram_base_addr, bram_depth);
+    int fd = __OpenPhysicalMem();
+    u32 *bram32_vptr = __MapBram(fd, bram_base_addr, bram_depth);
     u32 i;
     int ret = 0;
 
@@ -203,7 +203,7 @@ int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data
     {
         for (i = 0; i < data_len; i++)
         {
-            data[i] = BramReadWord(bram32_vptr, bram_depth, data_offset + i);
+            data[i] = __BramReadWord(bram32_vptr, bram_depth, data_offset + i);
         }
 #ifdef DEBUG_INFO
         printf("words read from BRAM\n");
@@ -218,7 +218,7 @@ int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data
         ret = -1;
     }
 
-    UnmapBram(bram32_vptr, bram_depth);
-    ClosePhysicalMem(fd);
+    __UnmapBram(bram32_vptr, bram_depth);
+    __ClosePhysicalMem(fd);
     return ret;
 }
