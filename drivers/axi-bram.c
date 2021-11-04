@@ -159,7 +159,14 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *dat
     u32 i;
     int ret = 0;
 
-    if (data_offset + data_len < bram_depth)
+    if (data_offset + data_len > bram_depth)
+    {
+#ifdef DEBUG_INFO
+        printf("failed to write words to BRAM\n");
+#endif
+        ret = -1;
+    }
+    else
     {
         for (i = 0; i < data_len; i++)
         {
@@ -169,13 +176,6 @@ int BramWriteWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *dat
         printf("words write to BRAM\n");
 #endif
         ret = 0;
-    }
-    else
-    {
-#ifdef DEBUG_INFO
-        printf("failed to write words to BRAM\n");
-#endif
-        ret = -1;
     }
 
     __UnmapBram(bram32_vptr, bram_depth);
@@ -199,7 +199,14 @@ int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data
     u32 i;
     int ret = 0;
 
-    if (data_offset + data_len < bram_depth)
+    if (data_offset + data_len > bram_depth)
+    {
+#ifdef DEBUG_INFO
+        printf("failed to read words from BRAM\n");
+#endif
+        ret = -1;
+    }
+    else
     {
         for (i = 0; i < data_len; i++)
         {
@@ -209,13 +216,6 @@ int BramReadWords(u32 bram_base_addr, u32 bram_depth, u32 data_offset, u32 *data
         printf("words read from BRAM\n");
 #endif
         ret = 0;
-    }
-    else
-    {
-#ifdef DEBUG_INFO
-        printf("failed to read words from BRAM\n");
-#endif
-        ret = -1;
     }
 
     __UnmapBram(bram32_vptr, bram_depth);
