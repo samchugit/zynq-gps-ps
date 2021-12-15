@@ -1,6 +1,8 @@
 
 #include <inttypes.h>
 
+// #define CHANNEL_TEST
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -58,6 +60,11 @@ const double F = -4.442807633e-10; // -2*sqrt(MU)/pow(C,2)
 // void ChanStart(int ch, int sv, int t_sample, int taps, int lo_shift, int ca_shift);
 // bool ChanSnapshot(int ch, uint16_t wpos, int *p_sv, int *p_bits, float *p_pwr);
 void ChanReset();
+#ifdef CHANNEL_TEST
+void DataInject(uint8_t ch, uint8_t *input);
+void TestBitSync(uint8_t ch);
+void TestBitSampling(uint8_t ch);
+#endif
 
 //////////////////////////////////////////////////////////////
 // Solution

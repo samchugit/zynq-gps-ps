@@ -12,6 +12,15 @@ int main()
 {
     uint8_t ch = 0;
     ChanReset();
+#ifdef CHANNEL_TEST
+    for (int i = 0; i < 76; i++)
+    {
+        printf("\nInjectint %dth data\n", i);
+        DataInject(ch, prompt_i + i * RECV_MAX);
+        TestBitSync(ch);
+        TestBitSampling(ch);
+    }
+#endif
 
     return 0;
 }

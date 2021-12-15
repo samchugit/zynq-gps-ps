@@ -62,6 +62,9 @@ struct CHANNEL
 
 void CHANNEL::Reset()
 {
+#ifdef CHANNEL_TEST
+    sv = 0;
+#endif
     memset(recv_buf, 0, RECV_MS * 2);
     buf_tail = 0;
     bit_head = 0;
@@ -117,6 +120,10 @@ void CHANNEL::BitSync()
         }
     }
 
+#ifdef CHANNEL_TEST
+    printf("BitSync edge_total:%d, max_edge_num:%d, sec_edge_num:%d\n", edge_total, max_edge_num, sec_edge_num);
+#endif
+
     // edge enough && max edge enough && sec edge low enough
     if (edge_total > BIT_SYNC_MAX && max_edge_num > BIT_SYNC_HIGH && sec_edge_num < BIT_SYNC_LOW)
     {
@@ -126,7 +133,7 @@ void CHANNEL::BitSync()
     }
     else
     {
-        Reset();
+        Reset(); // TODO: temporary handling with bit sync failed
     }
 }
 
@@ -185,6 +192,14 @@ void CHANNEL::FrameSync()
     {
         uint16_t nbits;
         uint16_t parity_ok = ParityCheck(nav_buf, &nbits);
+#ifdef CHANNEL_TEST
+        printf("Frame sync nbits:%d\n", nbits);
+        if (0 == parity_ok)
+        {
+            printf("Frame synced\n");
+            Ephemeris[sv].PrintAll();
+        }
+#endif
         nav_wp -= nbits;
         memcpy(nav_buf, nav_buf + nbits, nav_wp);
     }
@@ -192,6 +207,7 @@ void CHANNEL::FrameSync()
 
 static CHANNEL Chans[NUM_CHANS];
 
+// TODO: temporary handling with channel reset
 void ChanReset()
 {
     uint8_t i;
@@ -200,3 +216,38 @@ void ChanReset()
         Chans[i].Reset();
     }
 }
+
+#ifdef CHANNEL_TEST
+void DataInject(uint8_t ch, uint8_t *input)
+{
+    memcpy(Chans[ch].recv_buf + Chans[ch].buf_tail, input, RECV_MS);
+
+    for (int i = 0; i < RECV_MS; i++)
+        printf("%d", *(input + i));
+    printf("\n");
+
+    Chans[ch].buf_tail += RECV_MS;
+}
+
+void TestBitSync(uint8_t ch)
+{
+    Chans[ch].BitSync();
+    if (Chans[ch].bit_synced == 1)
+    {
+        printf("Bit synced, offset is %d\n", Chans[ch].bit_head);
+    }
+}
+
+void TestBitSampling(uint8_t ch)
+{
+    if (Chans[ch].bit_synced == 1 && Chans[ch].nav_wp < 350)
+    {
+        Chans[ch].BitSampling();
+        Chans[ch].FrameSync();
+
+        for (int i = 0; i < Chans[ch].nav_wp; i++)
+            printf("%d", Chans[ch].nav_buf[i]);
+        printf("\n");
+    }
+}
+#endif
