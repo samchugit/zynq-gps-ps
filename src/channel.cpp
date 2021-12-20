@@ -15,6 +15,14 @@ const int BIT_SYNC_LOW = 10;
 const uint8_t preambleUpright[] = {1, 0, 0, 0, 1, 0, 1, 1};
 const uint8_t preambleInverse[] = {0, 1, 1, 1, 0, 1, 0, 0};
 
+/**
+ * @brief parity check for a word
+ * @param p parity value of this word
+ * @param word word to be checked
+ * @param D29 29th bit of last word
+ * @param D30 30th bit of last word
+ * @return 0 if parity good
+ */
 static int parity(uint8_t *p, uint8_t *word, uint8_t D29, uint8_t D30)
 {
     uint8_t *d = word - 1;
@@ -29,7 +37,7 @@ static int parity(uint8_t *p, uint8_t *word, uint8_t D29, uint8_t D30)
     return memcmp(d + 25, p, 6);
 }
 
-/*
+/**
   recv_buf
   |- buf 1 ---------------------|- buf 2 -----------------------|
   0    1    2    3   ...   999  1000 1001 1002 1003 ...    1999
@@ -37,11 +45,18 @@ static int parity(uint8_t *p, uint8_t *word, uint8_t D29, uint8_t D30)
   └────┴────┴────┴── ... ──┴────┴────┴────┴────┴──  ...  ──┴────┘
        ↑                             ↑
        bit_head                      bit_tail
+
+  nav_buf
+  0    1    2    3   ...   299  300  301 ...   349
+  ┌────┬────┬────┬── ... ──┬────┬────┬── ... ──┬────┐
+  └────┴────┴────┴── ... ──┴────┴────┴── ... ──┴────┘
+                                ↑
+                                nav_tail
  */
 
 struct CHANNEL
 {
-    uint8_t sv;
+    uint8_t sv; // PRN of the satellite
 
     uint8_t recv_buf[RECV_MS * 2];
     uint16_t buf_tail;  // recv_buf data tail
@@ -50,8 +65,7 @@ struct CHANNEL
     uint8_t bit_synced; // bit synced flag
 
     uint8_t nav_buf[NAV_FRAME + RECV_MS / 20];
-    uint16_t nav_wp; // nav buf write position
-    uint16_t nav_rp; // nav buf read position
+    uint16_t nav_tail; // nav tail
 
     void Reset();
     void BitSync();
@@ -72,21 +86,24 @@ void CHANNEL::Reset()
     bit_synced = 0;
 
     memset(nav_buf, 0, NAV_FRAME + RECV_MS / 20);
-    nav_wp = 0;
-    nav_rp = 0;
+    nav_tail = 0;
 }
 
+/**
+ * @brief find bit offset of 'recv_buf'
+ * @return void
+ */
 void CHANNEL::BitSync()
 {
-    // bit alright synced
+    // Return if bit alright synced.
     if (bit_synced == 1)
         return;
 
-    // start bit sync
     uint8_t ip;
     uint8_t ip_last;
     uint8_t edges[20] = {0};
 
+    // Find and index all edges.
     ip = recv_buf[0];
     uint16_t ms_cnt;
     for (ms_cnt = 0; ms_cnt < RECV_MS; ms_cnt++)
@@ -98,6 +115,7 @@ void CHANNEL::BitSync()
             edges[code_cnt]++;
     }
 
+    // Find the max & sec edge.
     uint8_t edge_total = 0;
     uint8_t max_edge_num = 0;
     uint8_t max_edge_idx = 0;
@@ -124,7 +142,8 @@ void CHANNEL::BitSync()
     printf("BitSync edge_total:%d, max_edge_num:%d, sec_edge_num:%d\n", edge_total, max_edge_num, sec_edge_num);
 #endif
 
-    // edge enough && max edge enough && sec edge low enough
+    // Judge whether bit synced.
+    // Judgment takes edge_total, max_edge_num, sec_edge_num into account
     if (edge_total > BIT_SYNC_MAX && max_edge_num > BIT_SYNC_HIGH && sec_edge_num < BIT_SYNC_LOW)
     {
         bit_synced = 1;
@@ -137,6 +156,10 @@ void CHANNEL::BitSync()
     }
 }
 
+/**
+ * @brief resample 1kHz signal into 50bps NAV message
+ * @return void
+ */
 void CHANNEL::BitSampling()
 {
     uint8_t cnt = 0;
@@ -148,47 +171,59 @@ void CHANNEL::BitSampling()
         bit_sum += recv_buf[i];
         if (++cnt >= 20)
         {
-            if (bit_sum > 10)
-                nav_buf[nav_wp++] = 1;
+            if (bit_sum > 10) // judge 20ms data
+                nav_buf[nav_tail++] = 1;
             else
-                nav_buf[nav_wp++] = 0;
+                nav_buf[nav_tail++] = 0;
             cnt = 0;
             bit_sum = 0;
         }
     }
 
+    // Remove sampled signal from 'recv_buf'.
     buf_tail -= RECV_MS;
     memcpy(recv_buf, recv_buf + RECV_MS, buf_tail);
 }
 
+/**
+ * @brief find preable and check parity of a subframe
+ * @param buf input subframe buffer
+ * @param nbits number of bits need to shift
+ * @return 0 if parity good, 'nbits' if no preamble or parity failed
+ */
 uint16_t CHANNEL::ParityCheck(uint8_t *buf, uint16_t *nbits)
 {
     uint8_t p[6];
 
-    // upright or inverted preamble, setting of parity bits resolves phase ambiguity.
+    // Upright or inverted preamble, setting of parity bits resolves phase ambiguity.
     if (0 == memcmp(buf, preambleUpright, 8))
         p[4] = p[5] = 0;
     else if (0 == memcmp(buf, preambleInverse, 8))
         p[4] = p[5] = 1;
     else
-        return *nbits = 1;
+        return *nbits = 1; // return if no preamble found
 
-    // parity check up to ten 30-bit words ...
+    // Parity check up to ten 30-bit words.
     uint16_t i;
     for (i = 0; i < 300; i += 30)
     {
         if (0 != parity(p, buf + i, p[4], p[5]))
-            return *nbits = i + 30;
+            return *nbits = i + 30; // return if word parity check failed
     }
 
+    // Subframe found and parity check good, depack subframe.
     Ephemeris[sv].Subframe(buf);
     *nbits = 300;
     return 0;
 }
 
+/**
+ * @brief find frame in bit stream
+ * @return void
+ */
 void CHANNEL::FrameSync()
 {
-    while (nav_wp >= 300) // enough for a subframe
+    while (nav_tail >= 300) // enough for a subframe
     {
         uint16_t nbits;
         uint16_t parity_ok = ParityCheck(nav_buf, &nbits);
@@ -200,8 +235,8 @@ void CHANNEL::FrameSync()
             Ephemeris[sv].PrintAll();
         }
 #endif
-        nav_wp -= nbits;
-        memcpy(nav_buf, nav_buf + nbits, nav_wp);
+        nav_tail -= nbits;
+        memcpy(nav_buf, nav_buf + nbits, nav_tail); // shift 'nav_buf'
     }
 }
 
@@ -240,12 +275,12 @@ void TestBitSync(uint8_t ch)
 
 void TestBitSampling(uint8_t ch)
 {
-    if (Chans[ch].bit_synced == 1 && Chans[ch].nav_wp < 350)
+    if (Chans[ch].bit_synced == 1 && Chans[ch].nav_tail < 350)
     {
         Chans[ch].BitSampling();
         Chans[ch].FrameSync();
 
-        for (int i = 0; i < Chans[ch].nav_wp; i++)
+        for (int i = 0; i < Chans[ch].nav_tail; i++)
             printf("%d", Chans[ch].nav_buf[i]);
         printf("\n");
     }
