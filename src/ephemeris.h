@@ -1,4 +1,5 @@
-
+#ifndef _EPHEMERIS_H
+#define _EPHEMERIS_H 1
 class EPHEM
 {
 private:
@@ -37,3 +38,5 @@ public:
 };
 
 extern EPHEM Ephemeris[];
+
+#endif // _EPHEMERIS_H

@@ -1,3 +1,5 @@
+#ifndef _GPS_H
+#define _GPS_H 1
 
 #include <inttypes.h>
 
@@ -70,3 +72,5 @@ void TestBitSampling(uint8_t ch);
 // Solution
 
 // void SolveTask();
+
+#endif // _GPS_H
