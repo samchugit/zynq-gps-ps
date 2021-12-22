@@ -16,17 +16,37 @@
 #define suffix(msg) std::string(msg).append(" <").append(__FILENAME__).append(":").append(std::to_string(__LINE__)).append(" in ").append(__func__).append(">").c_str()
 #endif
 
+#ifndef num2str
+#define num2str(num) std::to_string(num)
+#endif
+
+template <typename T>
+std::string array2str(const T array[], size_t size)
+{
+    std::string str;
+    for (auto i = 0; i < size - 1; i++)
+    {
+        str += num2str(array[i]);
+        str += ',';
+    }
+    str += num2str(array[size - 1]);
+    return str;
+}
+
 // #define Trace(msg, ...) Logger::GetInstance().GetLogger()->trace(suffix(msg), __VA_ARGS__)
-// #define Debug(...) Logger::GetInstance().GetLogger()->debug(__VA_ARGS__)
-// #define Info(...) Logger::GetInstance().GetLogger()->info(__VA_ARGS__)
-// #define Warn(...) Logger::GetInstance().GetLogger()->warn(__VA_ARGS__)
-// #define Error(...) Logger::GetInstance().GetLogger()->error(__VA_ARGS__)
-// #define Critical(...) Logger::GetInstance().GetLogger()->critical(__VA_ARGS__)
-#define Debug(msg) Logger::GetInstance().GetLogger()->debug(suffix(msg))
-#define Info(msg) Logger::GetInstance().GetLogger()->info(suffix(msg))
-#define Warn(msg) Logger::GetInstance().GetLogger()->warn(suffix(msg))
-#define Error(msg) Logger::GetInstance().GetLogger()->error(suffix(msg))
-#define Critical(msg)) Logger::GetInstance().GetLogger()->critical(suffix(msg))
+#ifdef TRACE_ON
+#define Debug(msg, ...) Logger::GetInstance().GetLogger()->debug(suffix(msg), __VA_ARGS__)
+#define Info(msg, ...) Logger::GetInstance().GetLogger()->info(suffix(msg), __VA_ARGS__)
+#define Warn(msg, ...) Logger::GetInstance().GetLogger()->warn(suffix(msg), __VA_ARGS__)
+#define Error(msg, ...) Logger::GetInstance().GetLogger()->error(suffix(msg), __VA_ARGS__)
+#define Critical(msg, ...) Logger::GetInstance().GetLogger()->critical(suffix(msg), __VA_ARGS__)
+#else
+#define Debug(...) Logger::GetInstance().GetLogger()->debug(__VA_ARGS__)
+#define Info(...) Logger::GetInstance().GetLogger()->info(__VA_ARGS__)
+#define Warn(...) Logger::GetInstance().GetLogger()->warn(__VA_ARGS__)
+#define Error(...) Logger::GetInstance().GetLogger()->error(__VA_ARGS__)
+#define Critical(...) Logger::GetInstance().GetLogger()->critical(__VA_ARGS__)
+#endif
 
 class Logger
 {
