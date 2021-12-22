@@ -174,63 +174,37 @@ bool EPHEM::Valid()
 
 void EPHEM::PrintAll()
 {
-    printf("in subframe1:\n");
-    printf(" week:\t\t%d\n"
-           " IODC:\t\t%d\n"
-           " t_oc:\t\t%d\n"
-           " t_gd:\t\t%f\n"
-           " a_f0:\t\t%f\n"
-           " a_f1:\t\t%f\n"
-           " a_f2:\t\t%f\n\n",
-           week,
-           IODC,
-           t_oc,
-           t_gd,
-           a_f[0],
-           a_f[1],
-           a_f[2]);
-
-    printf("in subframe2:\n");
-    printf(" IODE2:\t\t%d\n"
-           " t_oe:\t\t%d\n"
-           " C_rs:\t\t%f\n"
-           " dn:\t\t%f\n"
-           " M_0:\t\t%f\n"
-           " C_uc:\t\t%f\n"
-           " e:\t\t%f\n"
-           " C_us:\t\t%f\n"
-           " sqrtA:\t\t%f\n"
-           " A:\t\t%f\n\n",
-           IODE2,
-           t_oe,
-           C_rs,
-           dn,
-           M_0,
-           C_uc,
-           e,
-           C_us,
-           sqrtA,
-           A);
-
-    printf("in subframe3:\n");
-    printf(" IODE3:\t\t%d\n"
-           " C_ic:\t\t%f\n"
-           " OMEGA_0:\t%f\n"
-           " C_is:\t\t%f\n"
-           " i_0:\t\t%f\n"
-           " C_rc:\t\t%f\n"
-           " omega:\t\t%f\n"
-           " OMEGA_dot:\t%f\n"
-           " IDOT:\t\t%f\n\n",
-           IODE3,
-           C_ic,
-           OMEGA_0,
-           C_is,
-           i_0,
-           C_rc,
-           omega,
-           OMEGA_dot,
-           IDOT);
+    Debug("Ephemeris *************************", 0);
+    Debug("Subframe 1 ------------------------", 0);
+    Debug("  week:     {}", week);
+    Debug("  IODC:     {}", IODC);
+    Debug("  t_oc:     {}", t_oc);
+    Debug("  t_gd:     {}", t_gd);
+    Debug("  a_f0:     {}", a_f[0]);
+    Debug("  a_f1:     {}", a_f[1]);
+    Debug("  a_f2:     {}", a_f[2]);
+    Debug("Subframe 2 ------------------------", 0);
+    Debug("  IODE2:    {}", IODE2);
+    Debug("  t_oe:     {}", t_oe);
+    Debug("  C_rs:     {}", C_rs);
+    Debug("  dn:       {}", dn);
+    Debug("  M_0:      {}", M_0);
+    Debug("  C_uc:     {}", C_uc);
+    Debug("  e:        {}", e);
+    Debug("  C_us:     {}", C_us);
+    Debug("  sqrtA:    {}", sqrtA);
+    Debug("  A:        {}", A);
+    Debug("Subframe 3 ------------------------", 0);
+    Debug("  IODE3:    {}", IODE3);
+    Debug("  C_ic:     {}", C_ic);
+    Debug("  OMEGA_0:  {}", OMEGA_0);
+    Debug("  C_is:     {}", C_is);
+    Debug("  i_0:      {}", i_0);
+    Debug("  C_rc:     {}", C_rc);
+    Debug("  omega:    {}", omega);
+    Debug("  OMEGA_dot:{}", OMEGA_dot);
+    Debug("  IDOT:     {}", IDOT);
+    Debug("Ephemeris END**********************", 0);
 }
 
 // called from channel tasks

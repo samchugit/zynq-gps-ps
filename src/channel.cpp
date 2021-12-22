@@ -139,7 +139,7 @@ void CHANNEL::BitSync()
     }
 
 #ifdef CHANNEL_TEST
-    printf("BitSync edge_total:%d, max_edge_num:%d, sec_edge_num:%d\n", edge_total, max_edge_num, sec_edge_num);
+    Debug("BitSync edge_total:{}, max_edge_num:{}, sec_edge_num:{}", edge_total, max_edge_num, sec_edge_num);
 #endif
 
     // Judge whether bit synced.
@@ -228,10 +228,10 @@ void CHANNEL::FrameSync()
         uint16_t nbits;
         uint16_t parity_ok = ParityCheck(nav_buf, &nbits);
 #ifdef CHANNEL_TEST
-        printf("Frame sync nbits:%d\n", nbits);
+        Debug("Frame sync nbits:{}", nbits);
         if (0 == parity_ok)
         {
-            printf("Frame synced\n");
+            Info("Frame synced", 0);
             Ephemeris[sv].PrintAll();
         }
 #endif
@@ -257,9 +257,7 @@ void DataInject(uint8_t ch, uint8_t *input)
 {
     memcpy(Chans[ch].recv_buf + Chans[ch].buf_tail, input, RECV_MS);
 
-    for (int i = 0; i < RECV_MS; i++)
-        printf("%d", *(input + i));
-    printf("\n");
+    Debug("{}", array2str(input, RECV_MS));
 
     Chans[ch].buf_tail += RECV_MS;
 }
@@ -269,7 +267,7 @@ void TestBitSync(uint8_t ch)
     Chans[ch].BitSync();
     if (Chans[ch].bit_synced == 1)
     {
-        printf("Bit synced, offset is %d\n", Chans[ch].bit_head);
+        Info("Bit synced, offset is {}", Chans[ch].bit_head);
     }
 }
 
@@ -280,9 +278,7 @@ void TestBitSampling(uint8_t ch)
         Chans[ch].BitSampling();
         Chans[ch].FrameSync();
 
-        for (int i = 0; i < Chans[ch].nav_tail; i++)
-            printf("%d", Chans[ch].nav_buf[i]);
-        printf("\n");
+        Debug("{}", array2str(Chans[ch].nav_buf, Chans[ch].nav_tail));
     }
 }
 #endif

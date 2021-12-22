@@ -15,7 +15,7 @@ int main()
 #ifdef CHANNEL_TEST
     for (int i = 0; i < 76; i++)
     {
-        printf("\nInjectint %dth data\n", i);
+        Info("Injectint {}th data", i);
         DataInject(ch, prompt_i + i * RECV_MAX);
         TestBitSync(ch);
         TestBitSampling(ch);

@@ -2,6 +2,7 @@
 #define _GPS_H 1
 
 #include <inttypes.h>
+#include "logger.h"
 
 // #define CHANNEL_TEST
 
