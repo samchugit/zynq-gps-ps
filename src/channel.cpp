@@ -59,14 +59,16 @@ struct CHANNEL
     uint8_t sv; // PRN of the satellite
 
     uint8_t recv_buf[RECV_MS * 2];
-    uint16_t buf_tail;  // recv_buf data tail
-    uint16_t bit_head;  // bit synced data head
-    uint16_t bit_tail;  // bit synced data tail
-    uint8_t bit_synced; // bit synced flag
+    uint16_t buf_tail;   // recv_buf data tail
+    uint16_t bit_head;   // bit synced data head
+    uint16_t bit_tail;   // bit synced data tail
+    uint8_t bit_sync_ok; // bit synced flag
 
     uint8_t nav_buf[NAV_FRAME + RECV_MS / 20];
     uint16_t nav_tail; // nav tail
 
+    void RecvReset();
+    void NavReset();
     void Reset();
     void BitSync();
     void BitSampling();
@@ -74,19 +76,37 @@ struct CHANNEL
     void FrameSync();
 };
 
+/**
+ * @brief reset receive buffer of current channel
+ */
+void CHANNEL::RecvReset()
+{
+    memset(recv_buf, 0, RECV_MS * 2);
+    buf_tail = 0;
+    bit_head = 0;
+    bit_tail = bit_head + RECV_MS;
+    bit_sync_ok = 0;
+}
+
+/**
+ * @brief reset nav buffer of current channel
+ */
+void CHANNEL::NavReset()
+{
+    memset(nav_buf, 0, NAV_FRAME + RECV_MS / 20);
+    nav_tail = 0;
+}
+
+/**
+ * @brief reset current channel
+ */
 void CHANNEL::Reset()
 {
 #ifdef CHANNEL_TEST
     sv = 0;
 #endif
-    memset(recv_buf, 0, RECV_MS * 2);
-    buf_tail = 0;
-    bit_head = 0;
-    bit_tail = bit_head + RECV_MS;
-    bit_synced = 0;
-
-    memset(nav_buf, 0, NAV_FRAME + RECV_MS / 20);
-    nav_tail = 0;
+    RecvReset();
+    NavReset();
 }
 
 /**
@@ -96,7 +116,7 @@ void CHANNEL::Reset()
 void CHANNEL::BitSync()
 {
     // Return if bit alright synced.
-    if (bit_synced == 1)
+    if (bit_sync_ok == 1)
         return;
 
     uint8_t ip;
@@ -138,7 +158,7 @@ void CHANNEL::BitSync()
         }
     }
 
-#ifdef CHANNEL_TEST
+#ifdef LOG_DEBUG
     Debug("BitSync edge_total:{}, max_edge_num:{}, sec_edge_num:{}", edge_total, max_edge_num, sec_edge_num);
 #endif
 
@@ -146,14 +166,12 @@ void CHANNEL::BitSync()
     // Judgment takes edge_total, max_edge_num, sec_edge_num into account
     if (edge_total > BIT_SYNC_MAX && max_edge_num > BIT_SYNC_HIGH && sec_edge_num < BIT_SYNC_LOW)
     {
-        bit_synced = 1;
+        bit_sync_ok = 1;
         bit_head += max_edge_idx;
         bit_tail += max_edge_idx;
     }
     else
-    {
-        Reset(); // TODO: temporary handling with bit sync failed
-    }
+        RecvReset();
 }
 
 /**
@@ -227,7 +245,7 @@ void CHANNEL::FrameSync()
     {
         uint16_t nbits;
         uint16_t parity_ok = ParityCheck(nav_buf, &nbits);
-#ifdef CHANNEL_TEST
+#ifdef LOG_DEBUG
         Debug("Frame sync nbits:{}", nbits);
         if (0 == parity_ok)
         {
@@ -265,7 +283,7 @@ void DataInject(uint8_t ch, uint8_t *input)
 void TestBitSync(uint8_t ch)
 {
     Chans[ch].BitSync();
-    if (Chans[ch].bit_synced == 1)
+    if (Chans[ch].bit_sync_ok == 1)
     {
         Info("Bit synced, offset is {}", Chans[ch].bit_head);
     }
@@ -273,7 +291,7 @@ void TestBitSync(uint8_t ch)
 
 void TestBitSampling(uint8_t ch)
 {
-    if (Chans[ch].bit_synced == 1 && Chans[ch].nav_tail < 350)
+    if (Chans[ch].bit_sync_ok == 1 && Chans[ch].nav_tail < 350)
     {
         Chans[ch].BitSampling();
         Chans[ch].FrameSync();
