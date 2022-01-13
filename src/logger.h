@@ -24,16 +24,14 @@ template <typename T>
 std::string array2str(const T array[], size_t size)
 {
     std::string str;
-    for (auto i = 0; i < size - 1; i++)
+    for (auto i = 0; i < size; i++)
     {
         str += num2str(array[i]);
         str += ',';
     }
-    str += num2str(array[size - 1]);
     return str;
 }
 
-// #define Trace(msg, ...) Logger::GetInstance().GetLogger()->trace(suffix(msg), __VA_ARGS__)
 #ifdef TRACE_ON
 #define Debug(msg, ...) Logger::GetInstance().GetLogger()->debug(suffix(msg), __VA_ARGS__)
 #define Info(msg, ...) Logger::GetInstance().GetLogger()->info(suffix(msg), __VA_ARGS__)
@@ -63,7 +61,7 @@ private:
             console_sink->set_level(spdlog::level::info);
             sinks.push_back(console_sink);
 
-            auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/log.txt", true);
+            auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/log.txt");
             file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [T%t] [%^%=8l%$] %v");
             file_sink->set_level(spdlog::level::debug);
             sinks.push_back(file_sink);

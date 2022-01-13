@@ -12,6 +12,9 @@ int main()
 {
     uint8_t ch = 0;
     ChanReset();
+    ChanStart(ch, 1);
+    ChanTask();
+
 #ifdef CHANNEL_TEST
     for (int i = 0; i < 76; i++)
     {

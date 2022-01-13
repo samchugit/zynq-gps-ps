@@ -3,17 +3,20 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "devmem3.h"
 #include "ephemeris.h"
 #include "gps.h"
 
 const int RECV_MS = 1000;
 const int NAV_FRAME = 300;
-const int BIT_SYNC_MAX = 25;
-const int BIT_SYNC_HIGH = 20;
-const int BIT_SYNC_LOW = 10;
+const int BIT_SYNC_MAX = 15;
+const int BIT_SYNC_HIGH = 12;
+const int BIT_SYNC_LOW = 5;
 
 const uint8_t preambleUpright[] = {1, 0, 0, 0, 1, 0, 1, 1};
 const uint8_t preambleInverse[] = {0, 1, 1, 1, 0, 1, 0, 0};
+
+static uint32_t BusyFlags;
 
 /**
  * @brief parity check for a word
@@ -56,24 +59,30 @@ static int parity(uint8_t *p, uint8_t *word, uint8_t D29, uint8_t D30)
 
 struct CHANNEL
 {
+    uint8_t ch; // channel id
     uint8_t sv; // PRN of the satellite
+
+    uint8_t data_fetch_ok; // data fetch flag (1 for good)
 
     uint8_t recv_buf[RECV_MS * 2];
     uint16_t buf_tail;   // recv_buf data tail
     uint16_t bit_head;   // bit synced data head
     uint16_t bit_tail;   // bit synced data tail
-    uint8_t bit_sync_ok; // bit synced flag
+    uint8_t bit_sync_ok; // bit synced flag (1 for good)
 
     uint8_t nav_buf[NAV_FRAME + RECV_MS / 20];
-    uint16_t nav_tail; // nav tail
+    uint16_t nav_tail;     // nav tail
+    uint8_t frame_sync_ok; // frame synced flag (0 for good)
 
     void RecvReset();
     void NavReset();
     void Reset();
+    void DataFetch();
     void BitSync();
     void BitSampling();
     uint16_t ParityCheck(uint8_t *buf, uint16_t *nbits);
     void FrameSync();
+    void Service();
 };
 
 /**
@@ -82,6 +91,7 @@ struct CHANNEL
 void CHANNEL::RecvReset()
 {
     memset(recv_buf, 0, RECV_MS * 2);
+    data_fetch_ok = 0;
     buf_tail = 0;
     bit_head = 0;
     bit_tail = bit_head + RECV_MS;
@@ -95,6 +105,7 @@ void CHANNEL::NavReset()
 {
     memset(nav_buf, 0, NAV_FRAME + RECV_MS / 20);
     nav_tail = 0;
+    frame_sync_ok = 1;
 }
 
 /**
@@ -107,6 +118,59 @@ void CHANNEL::Reset()
 #endif
     RecvReset();
     NavReset();
+}
+
+/**
+ * @brief fetch nav data from axi-reg (phy mem)
+ */
+void CHANNEL::DataFetch()
+{
+    static uint32_t rx_state_last;
+    uint32_t rx_state;
+    MemRead(0x50004400, &rx_state);
+
+#ifdef LOG_DEBUG
+    Debug("DataFetch rx_state: {}, rx_state_last: {}", rx_state, rx_state_last);
+#endif
+
+    if (rx_state_last == rx_state)
+    {
+#ifdef LOG_DEBUG
+        Debug("DataFetch data not accepted", 0);
+#endif
+        data_fetch_ok = 0;
+        return;
+    }
+#ifdef LOG_DEBUG
+    Debug("DataFetch data accepted", 0);
+#endif
+    data_fetch_ok = 1;
+    rx_state_last = rx_state;
+
+    uint32_t recv[RECV_MS];
+    switch (rx_state)
+    {
+    case 1:
+        MemReadWords(0x500c0000, RECV_MS, recv);
+        break;
+    case 2:
+        MemReadWords(0x50080000, RECV_MS, recv);
+        break;
+    default:
+        break;
+    }
+    // TODO: temporary fix, uint32_t[RECV_MS] -> uint8_t[RECV_MS]
+    for (uint16_t i = 0; i < RECV_MS; i++)
+    {
+        if (recv[i] == 0)
+            recv_buf[buf_tail++] = 0;
+        else
+            recv_buf[buf_tail++] = 1;
+    }
+#ifdef LOG_DEBUG
+    Debug("DataFetch buf_tail: {}", buf_tail);
+    Debug("DataFetch updated recv_buf: {}", array2str(recv_buf, buf_tail));
+#endif
 }
 
 /**
@@ -199,8 +263,13 @@ void CHANNEL::BitSampling()
     }
 
     // Remove sampled signal from 'recv_buf'.
-    buf_tail -= RECV_MS;
+    if (buf_tail < RECV_MS)
+        buf_tail = 0;
+    else
+        buf_tail -= RECV_MS;
     memcpy(recv_buf, recv_buf + RECV_MS, buf_tail);
+    // clear frame synced flag
+    frame_sync_ok = 1;
 }
 
 /**
@@ -244,18 +313,57 @@ void CHANNEL::FrameSync()
     while (nav_tail >= 300) // enough for a subframe
     {
         uint16_t nbits;
-        uint16_t parity_ok = ParityCheck(nav_buf, &nbits);
+        uint16_t frame_sync_ok = ParityCheck(nav_buf, &nbits);
 #ifdef LOG_DEBUG
-        Debug("Frame sync nbits:{}", nbits);
-        if (0 == parity_ok)
-        {
-            Info("Frame synced", 0);
-            Ephemeris[sv].PrintAll();
-        }
+        Debug("Frame sync nbits:{}.", nbits);
 #endif
         nav_tail -= nbits;
         memcpy(nav_buf, nav_buf + nbits, nav_tail); // shift 'nav_buf'
     }
+}
+
+void CHANNEL::Service()
+{
+#ifdef LOG_INFO
+    Info("Enter channel {}: PRN {}.", ch, sv);
+#endif
+
+    const int POLLING = 250; // Poll 4 times per second
+    const int TIMEOUT = 80;  // Bail after 20 seconds on LOS
+    for (int watchdog = 0; watchdog < TIMEOUT; watchdog++)
+    {
+        TimerWait(POLLING);
+        DataFetch();
+        if (data_fetch_ok == 1)
+        {
+            BitSync();
+            if (bit_sync_ok == 1)
+            {
+#ifdef LOG_INFO
+                Info("Bit synced for channel {}: PRN {}. Bit offset {}ms.", ch, sv, bit_head);
+#endif
+                BitSampling();
+#ifdef LOG_DEBUG
+                Debug("Updated nav_buf: {}.", array2str(nav_buf, nav_tail));
+#endif
+                FrameSync();
+                if (frame_sync_ok == 0)
+                {
+                    watchdog = 0;
+#ifdef LOG_INFO
+                    Info("Frame synced for channel {}: PRN {}.", ch, sv);
+#endif
+#ifdef LOG_DEBUG
+                    Ephemeris[sv].PrintAll();
+#endif
+                }
+            }
+        }
+    }
+
+#ifdef LOG_INFO
+    Info("Leave channel {}: PRN {}.", ch, sv);
+#endif
 }
 
 static CHANNEL Chans[NUM_CHANS];
@@ -268,6 +376,25 @@ void ChanReset()
     {
         Chans[i].Reset();
     }
+}
+
+void ChanTask()
+{ // one thread per channel
+    static int inst;
+    int ch = inst++; // which channel am I?
+    Chans[ch].ch = ch;
+    for (;;)
+    {
+        if (BusyFlags & (1 << ch))
+            Chans[ch].Service(); // returns after loss of signal
+        // NextTask();
+    }
+}
+
+void ChanStart(uint8_t ch, uint8_t sv)
+{
+    Chans[ch].sv = sv;
+    BusyFlags |= (1 << ch);
 }
 
 #ifdef CHANNEL_TEST
