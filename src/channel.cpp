@@ -113,9 +113,7 @@ void CHANNEL::NavReset()
  */
 void CHANNEL::Reset()
 {
-#ifdef CHANNEL_TEST
     sv = 0;
-#endif
     RecvReset();
     NavReset();
 }
@@ -129,21 +127,15 @@ void CHANNEL::DataFetch()
     uint32_t rx_state;
     MemRead(0x50004400, &rx_state);
 
-#ifdef LOG_DEBUG
-    Debug("DataFetch rx_state: {}, rx_state_last: {}", rx_state, rx_state_last);
-#endif
+    Debug("DataFetch rx_state: {}, rx_state_last: {}.", rx_state, rx_state_last);
 
     if (rx_state_last == rx_state)
     {
-#ifdef LOG_DEBUG
-        Debug("DataFetch data not accepted", 0);
-#endif
+        Debug("DataFetch data not accepted.", 0);
         data_fetch_ok = 0;
         return;
     }
-#ifdef LOG_DEBUG
-    Debug("DataFetch data accepted", 0);
-#endif
+    Debug("DataFetch data accepted.", 0);
     data_fetch_ok = 1;
     rx_state_last = rx_state;
 
@@ -167,10 +159,8 @@ void CHANNEL::DataFetch()
         else
             recv_buf[buf_tail++] = 1;
     }
-#ifdef LOG_DEBUG
-    Debug("DataFetch buf_tail: {}", buf_tail);
-    Debug("DataFetch updated recv_buf: {}", array2str(recv_buf, buf_tail));
-#endif
+    Debug("DataFetch buf_tail: {}.", buf_tail);
+    Debug("DataFetch updated recv_buf: {}.", array2str(recv_buf, buf_tail));
 }
 
 /**
@@ -222,13 +212,11 @@ void CHANNEL::BitSync()
         }
     }
 
-#ifdef LOG_DEBUG
-    Debug("BitSync edge_total:{}, max_edge_num:{}, sec_edge_num:{}", edge_total, max_edge_num, sec_edge_num);
-#endif
+    Debug("BitSync edge_total:{}, max_edge_num:{}, sec_edge_num:{}.", edge_total, max_edge_num, sec_edge_num);
 
     // Judge whether bit synced.
-    // Judgment takes edge_total, max_edge_num, sec_edge_num into account
-    if (edge_total > BIT_SYNC_MAX && max_edge_num > BIT_SYNC_HIGH && sec_edge_num < BIT_SYNC_LOW)
+    // Judgment takes edge_total, max_edge_num, sec_edge_num into account.
+    if (edge_total >= BIT_SYNC_MAX && max_edge_num >= BIT_SYNC_HIGH && sec_edge_num <= BIT_SYNC_LOW)
     {
         bit_sync_ok = 1;
         bit_head += max_edge_idx;
@@ -268,7 +256,7 @@ void CHANNEL::BitSampling()
     else
         buf_tail -= RECV_MS;
     memcpy(recv_buf, recv_buf + RECV_MS, buf_tail);
-    // clear frame synced flag
+    // Clear frame synced flag.
     frame_sync_ok = 1;
 }
 
@@ -314,9 +302,7 @@ void CHANNEL::FrameSync()
     {
         uint16_t nbits;
         uint16_t frame_sync_ok = ParityCheck(nav_buf, &nbits);
-#ifdef LOG_DEBUG
         Debug("Frame sync nbits:{}.", nbits);
-#endif
         nav_tail -= nbits;
         memcpy(nav_buf, nav_buf + nbits, nav_tail); // shift 'nav_buf'
     }
@@ -324,12 +310,10 @@ void CHANNEL::FrameSync()
 
 void CHANNEL::Service()
 {
-#ifdef LOG_INFO
     Info("Enter channel {}: PRN {}.", ch, sv);
-#endif
 
-    const int POLLING = 250; // Poll 4 times per second
-    const int TIMEOUT = 80;  // Bail after 20 seconds on LOS
+    const int POLLING = 250; // poll 4 times per second
+    const int TIMEOUT = 80;  // bail after 20 seconds on LOS
     for (int watchdog = 0; watchdog < TIMEOUT; watchdog++)
     {
         TimerWait(POLLING);
@@ -339,31 +323,21 @@ void CHANNEL::Service()
             BitSync();
             if (bit_sync_ok == 1)
             {
-#ifdef LOG_INFO
-                Info("Bit synced for channel {}: PRN {}. Bit offset {}ms.", ch, sv, bit_head);
-#endif
+                Info("Bit synced for channel {}: PRN {}. Bit offset {}.", ch, sv, bit_head);
                 BitSampling();
-#ifdef LOG_DEBUG
                 Debug("Updated nav_buf: {}.", array2str(nav_buf, nav_tail));
-#endif
                 FrameSync();
                 if (frame_sync_ok == 0)
                 {
                     watchdog = 0;
-#ifdef LOG_INFO
                     Info("Frame synced for channel {}: PRN {}.", ch, sv);
-#endif
-#ifdef LOG_DEBUG
                     Ephemeris[sv].PrintAll();
-#endif
                 }
             }
         }
     }
 
-#ifdef LOG_INFO
     Info("Leave channel {}: PRN {}.", ch, sv);
-#endif
 }
 
 static CHANNEL Chans[NUM_CHANS];
@@ -379,15 +353,15 @@ void ChanReset()
 }
 
 void ChanTask()
-{ // one thread per channel
+{
     static int inst;
-    int ch = inst++; // which channel am I?
+    int ch = inst++; // in which channel 
     Chans[ch].ch = ch;
     for (;;)
     {
         if (BusyFlags & (1 << ch))
             Chans[ch].Service(); // returns after loss of signal
-        // NextTask();
+        NextTask();
     }
 }
 

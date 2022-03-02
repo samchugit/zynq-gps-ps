@@ -1,6 +1,12 @@
 #ifndef _LOGGER_H
 #define _LOGGER_H 1
 
+#define LOG_DEBUG
+#define LOG_INFO
+#define LOG_WARN
+#define LOG_ERROR
+#define LOG_CRITICAL
+
 #include <iostream>
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
@@ -27,7 +33,6 @@ std::string array2str(const T array[], size_t size)
     for (auto i = 0; i < size; i++)
     {
         str += num2str(array[i]);
-        str += ',';
     }
     return str;
 }
@@ -39,11 +44,31 @@ std::string array2str(const T array[], size_t size)
 #define Error(msg, ...) Logger::GetInstance().GetLogger()->error(suffix(msg), __VA_ARGS__)
 #define Critical(msg, ...) Logger::GetInstance().GetLogger()->critical(suffix(msg), __VA_ARGS__)
 #else
+#ifdef LOG_DEBUG
 #define Debug(...) Logger::GetInstance().GetLogger()->debug(__VA_ARGS__)
+#else
+#define Debug(...)
+#endif
+#ifdef LOG_INFO
 #define Info(...) Logger::GetInstance().GetLogger()->info(__VA_ARGS__)
+#else
+#define Info(...)
+#endif
+#ifdef LOG_WARN
 #define Warn(...) Logger::GetInstance().GetLogger()->warn(__VA_ARGS__)
+#else
+#define Warn(...)
+#endif
+#ifdef LOG_ERROR
 #define Error(...) Logger::GetInstance().GetLogger()->error(__VA_ARGS__)
+#else
+#define Error(...)
+#endif
+#ifdef LOG_CRITICAL
 #define Critical(...) Logger::GetInstance().GetLogger()->critical(__VA_ARGS__)
+#else
+#define Critical(...)
+#endif
 #endif
 
 class Logger

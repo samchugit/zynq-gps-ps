@@ -5,11 +5,7 @@
 #include "logger.h"
 
 // #define CHANNEL_TEST
-#define LOG_DEBUG
-#define LOG_INFO
-#define LOG_WARN
-#define LOG_ERROR
-#define LOG_CRITICAL
+
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
