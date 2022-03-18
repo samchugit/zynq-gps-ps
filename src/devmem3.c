@@ -1,19 +1,19 @@
+#include "devmem3.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
-#include <errno.h>
-#include <inttypes.h>
 #include <sys/mman.h>
-#include "devmem3.h"
+#include <unistd.h>
 
 #ifdef DEVMEM_DEBUG
-#define FATAL                                                    \
-    {                                                            \
-        fprintf(stderr, "Error at line %d, file %s: %s (%d).\n", \
-                __LINE__, __FILE__, strerror(errno), errno);     \
-        return EXIT_FAILURE;                                     \
+#define FATAL                                                              \
+    {                                                                      \
+        fprintf(stderr, "Error at line %d, file %s: %s (%d).\n", __LINE__, \
+                __FILE__, strerror(errno), errno);                         \
+        return EXIT_FAILURE;                                               \
     }
 #else
 #define FATAL                \
@@ -42,7 +42,8 @@ int MemRead(off_t target, uint32_t *readval)
     fflush(stdout);
 #endif
 
-    map_base = mmap(0, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, target & ~(page_size - 1));
+    map_base = mmap(0, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
+                    target & ~(page_size - 1));
     if (map_base == MAP_FAILED)
         FATAL;
     virt_addr = map_base + (target & (page_size - 1));
@@ -82,7 +83,8 @@ int MemWrite(off_t target, uint32_t writeval)
     fflush(stdout);
 #endif
 
-    map_base = mmap(0, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, target & ~(page_size - 1));
+    map_base = mmap(0, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
+                    target & ~(page_size - 1));
     if (map_base == MAP_FAILED)
         FATAL;
     virt_addr = map_base + (target & (page_size - 1));
@@ -91,7 +93,8 @@ int MemWrite(off_t target, uint32_t writeval)
     readback = *(volatile uint32_t *)virt_addr;
 
 #ifdef DEVMEM_DEBUG
-    fprintf(stdout, "At 0x%lX (%p) write 0x%X, readback 0x%X.\n", target, virt_addr, writeval, readback);
+    fprintf(stdout, "At 0x%lX (%p) write 0x%X, readback 0x%X.\n", target,
+            virt_addr, writeval, readback);
     fflush(stdout);
 #endif
 
@@ -114,8 +117,7 @@ int MemWrite(off_t target, uint32_t writeval)
 void MemReadWords(off_t addr, uint32_t length, uint32_t *data)
 {
     off_t target;
-    for (uint32_t i = 0; i < length; i++)
-    {
+    for (uint32_t i = 0; i < length; i++) {
         target = addr + i * sizeof(uint32_t);
         MemRead(target, data + i);
     }
@@ -131,8 +133,7 @@ void MemReadWords(off_t addr, uint32_t length, uint32_t *data)
 void MemWriteWords(off_t addr, uint32_t length, uint32_t *data)
 {
     off_t target;
-    for (uint32_t i = 0; i < length; i++)
-    {
+    for (uint32_t i = 0; i < length; i++) {
         target = addr + i * sizeof(uint32_t);
         MemWrite(target, *(data + i));
     }

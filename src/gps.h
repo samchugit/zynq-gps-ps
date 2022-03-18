@@ -1,11 +1,10 @@
 #ifndef _GPS_H
 #define _GPS_H 1
 
-#include <inttypes.h>
 #include "logger.h"
+#include <inttypes.h>
 
 // #define CHANNEL_TEST
-
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -30,12 +29,10 @@
 
 const double PI = 3.1415926535898;
 
-const double MU = 3.986005e14;          // WGS 84: earth's gravitational constant for GPS user
+const double MU = 3.986005e14; // WGS 84: earth's gravitational constant
 const double OMEGA_E = 7.2921151467e-5; // WGS 84: earth's rotation rate
-
-const double C = 2.99792458e8; // Speed of light
-
-const double F = -4.442807633e-10; // -2*sqrt(MU)/pow(C,2)
+const double C = 2.99792458e8;          // Speed of light
+const double F = -4.442807633e-10;      // -2*sqrt(MU)/pow(C,2)
 
 //////////////////////////////////////////////////////////////
 // Coroutines

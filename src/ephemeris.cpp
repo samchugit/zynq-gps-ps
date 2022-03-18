@@ -1,8 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "gps.h"
 #include "ephemeris.h"
+#include "gps.h"
 
 EPHEM Ephemeris[NUM_SATS];
 
@@ -16,9 +16,11 @@ static double TimeFromEpoch(double t, double t_ref)
     return t;
 }
 
-union PACK
-{
-    PACK(int a, int b = 0, int c = 0, int d = 0) { byte[3] = a, byte[2] = b, byte[1] = c, byte[0] = d; }
+union PACK {
+    PACK(int a, int b = 0, int c = 0, int d = 0)
+    {
+        byte[3] = a, byte[2] = b, byte[1] = c, byte[0] = d;
+    }
     uint8_t byte[4];
     unsigned u32;
     signed s32;
@@ -86,26 +88,20 @@ double EPHEM::EccentricAnomaly(double t_k)
 {
     // Semi-major axis
     A = sqrtA * sqrtA;
-
     // Computed mean motion (rad/sec)
     double n_0 = sqrt(MU / (A * A * A));
-
     // Corrected mean motion
     double n = n_0 + dn;
-
     // Mean anomaly
     double M_k = M_0 + n * t_k;
-
     // Solve Kepler's Equation for Eccentric Anomaly
     double E_k = M_k;
-    for (;;)
-    {
+    for (;;) {
         double temp = E_k;
         E_k = M_k + e * sin(E_k);
         if (fabs(E_k - temp) < 1e-10)
             break;
     }
-
     return E_k;
 }
 
@@ -114,35 +110,28 @@ void EPHEM::GetXYZ(double *x, double *y, double *z, double t)
 {
     // Time from ephemeris reference epoch
     double t_k = TimeFromEpoch(t, t_oe);
-
     // Eccentric Anomaly
     double E_k = EccentricAnomaly(t_k);
-
     // True Anomaly
-    double v_k = atan2(
-        sqrt(1 - e * e) * sin(E_k),
-        cos(E_k) - e);
-
+    double v_k = atan2(sqrt(1 - e * e) * sin(E_k), cos(E_k) - e);
     // Argument of Latitude
     double AOL = v_k + omega;
-
     // Second Harmonic Perturbations
-    double du_k = C_us * sin(2 * AOL) + C_uc * cos(2 * AOL); // Argument of Latitude Correction
-    double dr_k = C_rs * sin(2 * AOL) + C_rc * cos(2 * AOL); // Radius Correction
-    double di_k = C_is * sin(2 * AOL) + C_ic * cos(2 * AOL); // Inclination Correction
-
+    double du_k = C_us * sin(2 * AOL) +
+                  C_uc * cos(2 * AOL); // Argument of Latitude Correction
+    double dr_k =
+        C_rs * sin(2 * AOL) + C_rc * cos(2 * AOL); // Radius Correction
+    double di_k =
+        C_is * sin(2 * AOL) + C_ic * cos(2 * AOL); // Inclination Correction
     // Corrected Argument of Latitude; Radius & Inclination
     double u_k = AOL + du_k;
     double r_k = A * (1 - e * cos(E_k)) + dr_k;
     double i_k = i_0 + di_k + IDOT * t_k;
-
     // Positions in orbital plane
     double x_kp = r_k * cos(u_k);
     double y_kp = r_k * sin(u_k);
-
     // Corrected longitude of ascending node
     double OMEGA_k = OMEGA_0 + (OMEGA_dot - OMEGA_E) * t_k - OMEGA_E * t_oe;
-
     // Earth-fixed coordinates
     *x = x_kp * cos(OMEGA_k) - y_kp * cos(i_k) * sin(OMEGA_k);
     *y = x_kp * sin(OMEGA_k) + y_kp * cos(i_k) * cos(OMEGA_k);
@@ -153,24 +142,17 @@ double EPHEM::GetClockCorrection(double t)
 {
     // Time from ephemeris reference epoch
     double t_k = TimeFromEpoch(t, t_oe);
-
     // Eccentric Anomaly
     double E_k = EccentricAnomaly(t_k);
-
     // Relativistic correction
     double t_R = F * e * sqrtA * sin(E_k);
-
     // Time from clock correction epoch
     t = TimeFromEpoch(t, t_oc);
-
     // 20.3.3.3.3.1 User Algorithm for SV Clock Correction
     return a_f[0] + a_f[1] * pow(t, 1) + a_f[2] * pow(t, 2) + t_R - t_gd;
 }
 
-bool EPHEM::Valid()
-{
-    return IODC != 0 && IODC == IODE2 && IODC == IODE3;
-}
+bool EPHEM::Valid() { return IODC != 0 && IODC == IODE2 && IODC == IODE3; }
 
 void EPHEM::PrintAll()
 {
@@ -213,10 +195,8 @@ void EPHEM::Subframe(uint8_t *buf)
     uint8_t nav[30];
     uint8_t id = (buf[49] << 2) + (buf[50] << 1) + buf[51];
 
-    for (int i = 0; i < 30; buf += 6)
-    {
-        for (int j = 0; j < 3; j++)
-        {
+    for (int i = 0; i < 30; buf += 6) {
+        for (int j = 0; j < 3; j++) {
             int byte = 0;
             for (int k = 0; k < 8; k++)
                 byte += byte + *buf++;
@@ -226,8 +206,7 @@ void EPHEM::Subframe(uint8_t *buf)
 
     tow = PACK(nav[3], nav[4], nav[5]).u(17);
 
-    switch (id)
-    {
+    switch (id) {
     case 1:
         Subframe1(nav);
         break;

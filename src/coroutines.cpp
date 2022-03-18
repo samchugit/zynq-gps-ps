@@ -26,15 +26,12 @@
 
 unsigned __pointer_chk_guard;
 
-struct TASK
-{
+struct TASK {
     int stk[STACK_SIZE];
-    union
-    {
+    union {
         jmp_buf jb;
         unsigned u[1];
-        struct
-        {
+        struct {
             void *v[6], *sl, *fp, *sp, (*pc)();
         };
     };
@@ -73,8 +70,7 @@ unsigned Microseconds(void)
 void TimerWait(unsigned ms)
 {
     unsigned finish = Microseconds() + 1000 * ms;
-    for (;;)
-    {
+    for (;;) {
         NextTask();
         int diff = finish - Microseconds();
         if (diff <= 0)
@@ -82,10 +78,7 @@ void TimerWait(unsigned ms)
     }
 }
 
-void EventRaise(unsigned sigs)
-{
-    Signals |= sigs;
-}
+void EventRaise(unsigned sigs) { Signals |= sigs; }
 
 unsigned EventCatch(unsigned sigs)
 {

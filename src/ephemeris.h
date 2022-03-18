@@ -1,8 +1,9 @@
 #ifndef _EPHEMERIS_H
 #define _EPHEMERIS_H 1
+
 class EPHEM
 {
-private:
+  private:
     // Subframe 1
     unsigned week, IODC, t_oc;
     double t_gd, a_f[3];
@@ -27,7 +28,7 @@ private:
 
     double EccentricAnomaly(double t_k);
 
-public:
+  public:
     unsigned tow;
 
     void Subframe(uint8_t *buf);
